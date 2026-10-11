@@ -657,3 +657,4 @@ button { -webkit-tap-highlight-color: transparent; }
 .ex-py { font-size: 0.9375rem; color: var(--text-2); }
 .ex-en { font-size: 0.9375rem; }
 .word-detail .ex-block { text-align: left; margin: 0 0 0.75rem; }
+.quiz-stop { align-self: center; min-height: 44px; color: var(--text-2); font-size: 0.9375rem; }
