@@ -69,7 +69,7 @@ const pinyinOf = (c) => splitPinyin(c).pinyin;
 
 // label(card) is what an option shows, and what must differ between options.
 const KINDS = {
-  hz2en: { label: meaningOf, hanziOptions: false, autoPrompt: true },
+  hz2en: { label: meaningOf, hanziOptions: false, autoPrompt: "audioFirst" },
   hz2py: { label: pinyinOf, hanziOptions: false, autoPrompt: false },
   en2hz: { label: (c) => c.word, hanziOptions: true, autoPrompt: false },
   py2hz: { label: (c) => c.word, hanziOptions: true, autoPrompt: false },
@@ -229,7 +229,13 @@ export function createQuiz(root, hooks) {
     root.replaceChildren(prompt, opts, h("div", { class: "quiz-result", "aria-live": "polite" }));
 
     // Called synchronously from the tap that got us here, which keeps iOS happy.
-    if (speakOnPrompt === "always" || (speakOnPrompt && getSettings().autoplay)) {
+    // Hearing a word while you can see its hanzi gives away the reading you are
+    // meant to recall, so that is opt-in ("Hear the word first").
+    const cfg = getSettings();
+    if (
+      speakOnPrompt === "always" ||
+      (speakOnPrompt === "audioFirst" && cfg.autoplay && cfg.audioFirst)
+    ) {
       speak(card.word);
     }
   }
