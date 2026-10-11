@@ -3,12 +3,11 @@ import { isHanzi, pinyinSyllables, speakableText, splitPinyin } from "./pinyin.j
 import {
   canSpeak,
   getSettings,
-  onVoiceChange,
   setSetting,
   speak,
   speakCard,
   stopSpeaking,
-  voiceStatus,
+  voiceProblem,
 } from "./speech.js";
 
 // ── API config ────────────────────────────────────────────────────────────────
@@ -230,6 +229,7 @@ async function refreshDueCount() {
 
 async function loadHome() {
   showView("home");
+  syncAudioSettings(); // the voice list may have finished loading since last time
   pickProverb();
   homeEl.total.textContent = "—";
   renderDue(null);
@@ -505,7 +505,6 @@ function showCard() {
   // In reverse mode the word is the answer, so its speaker waits for the flip.
   stopSpeaking();
   updateCardSpeaker(card);
-  if (!reverseMode && getSettings().audioFirst && getSettings().autoplay) speak(card.word);
 }
 
 function updateCardSpeaker(card) {
@@ -1044,43 +1043,21 @@ syncActivity();
 
 // ── Audio settings ────────────────────────────────────────────────────────────
 const autoplaySwitch = document.getElementById("autoplay-toggle");
-const audioFirstSwitch = document.getElementById("audiofirst-toggle");
-const rateToggle = document.getElementById("rate-toggle");
 const voiceStatusEl = document.getElementById("voice-status");
 
 function syncAudioSettings() {
   const cfg = getSettings();
   autoplaySwitch.setAttribute("aria-checked", String(cfg.autoplay));
-  audioFirstSwitch.setAttribute("aria-checked", String(cfg.audioFirst));
-  rateToggle.querySelectorAll(".seg-btn").forEach((b) => {
-    const on = Number(b.dataset.rate) === cfg.rate;
-    b.classList.toggle("active", on);
-    b.setAttribute("aria-pressed", String(on));
-  });
-  const status = voiceStatus();
-  voiceStatusEl.textContent = status.text;
-  voiceStatusEl.classList.toggle("warn", !status.ok);
+  // Only say something when audio can't work on this device.
+  const problem = voiceProblem();
+  voiceStatusEl.textContent = problem || "";
+  voiceStatusEl.classList.toggle("hidden", !problem);
 }
 
 autoplaySwitch.addEventListener("click", () => {
   setSetting("autoplay", !getSettings().autoplay);
   syncAudioSettings();
 });
-audioFirstSwitch.addEventListener("click", () => {
-  setSetting("audioFirst", !getSettings().audioFirst);
-  syncAudioSettings();
-});
-rateToggle.addEventListener("click", (e) => {
-  const btn = e.target.closest(".seg-btn");
-  if (!btn) return;
-  setSetting("rate", Number(btn.dataset.rate));
-  syncAudioSettings();
-  speak("你好");
-});
-document
-  .getElementById("btn-voice-test")
-  .addEventListener("click", () => speak("你好，欢迎学习中文"));
-onVoiceChange(syncAudioSettings);
 syncAudioSettings();
 
 // ── Init ──────────────────────────────────────────────────────────────────────

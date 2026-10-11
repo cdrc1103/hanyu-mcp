@@ -591,9 +591,7 @@ button { -webkit-tap-highlight-color: transparent; }
 /* ===== Audio ===== */
 .card-speak-row { display: flex; justify-content: center; margin: 1rem 0 0; min-height: 0; }
 .btn-speak { flex-shrink: 0; font-size: 1.125rem; }
-.voice-status { margin-top: 0.25rem; }
-.voice-status.warn { color: var(--danger); }
-.voice-test { align-self: flex-start; font-size: 0.9375rem; min-height: 44px; }
+.voice-status { margin-top: 0.25rem; color: var(--danger); }
 #study-notice { color: var(--text-2); }
 
 /* ===== Quiz ===== */
