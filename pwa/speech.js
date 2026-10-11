@@ -2,21 +2,15 @@
 // Mandarin voice (on iPhone these are the system voices from iOS).
 import { speakableText } from "./pinyin.js";
 
-const KEYS = {
-  autoplay: "vocab_autoplay",
-  rate: "vocab_speech_rate",
-  audioFirst: "vocab_audio_first",
-};
+const KEYS = { autoplay: "vocab_autoplay" };
+const SPEECH_RATE = 0.8; // a little slower than natural, easier to follow while learning
 
 const synth = typeof window !== "undefined" && "speechSynthesis" in window ? speechSynthesis : null;
 
 // ── Settings (persisted per device) ───────────────────────────────────────────
-const settings = { autoplay: true, rate: 0.8, audioFirst: false };
+const settings = { autoplay: true };
 try {
   settings.autoplay = localStorage.getItem(KEYS.autoplay) !== "false";
-  settings.audioFirst = localStorage.getItem(KEYS.audioFirst) === "true";
-  const rate = Number(localStorage.getItem(KEYS.rate));
-  if (rate >= 0.4 && rate <= 1.2) settings.rate = rate;
 } catch {
   // storage unavailable — defaults apply for this page load
 }
@@ -76,14 +70,13 @@ export function onVoiceChange(cb) {
 // false only when the list is known and holds no Mandarin voice.
 export const canSpeak = () => !!synth && (!!voice || voices.length === 0);
 
-export function voiceStatus() {
-  if (!synth) return { ok: false, text: "This browser has no speech support." };
-  if (voice) return { ok: true, text: `Voice: ${voice.name} (${voice.lang})` };
-  if (voices.length === 0) return { ok: true, text: "Looking for a Chinese voice…" };
-  return {
-    ok: false,
-    text: "No Mandarin voice found. On iPhone: Settings › Accessibility › Spoken Content › Voices › Chinese.",
-  };
+// A hint to show when audio can't work on this device, or null when it can.
+export function voiceProblem() {
+  if (!synth) return "This browser has no speech support.";
+  if (!canSpeak()) {
+    return "No Mandarin voice found. On iPhone: Settings › Accessibility › Spoken Content › Voices › Chinese.";
+  }
+  return null;
 }
 
 // ── Speaking ──────────────────────────────────────────────────────────────────
@@ -118,7 +111,7 @@ export function speak(...texts) {
     const u = new SpeechSynthesisUtterance(part);
     if (voice) u.voice = voice;
     u.lang = voice ? voice.lang : "zh-CN";
-    u.rate = settings.rate;
+    u.rate = SPEECH_RATE;
     synth.speak(u);
   }
   return true;

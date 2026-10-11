@@ -116,7 +116,7 @@ Both modes use the same SM-2 algorithm and quality scores, but each keeps its ow
 - **Looping:** the cards are asked once each in a random order; then a new round starts with a fresh shuffle, until you press "End quiz" or leave. A summary shows how many you answered and how many were right.
 - **Options:** wrong options are other cards from the whole deck, preferring cards with the same character count.
 
-Audio uses the browser's Web Speech API with a Mandarin system voice (Cantonese voices are skipped). It never plays something that gives away the answer: the hanzi → pinyin and meaning → hanzi questions stay silent until answered, the hanzi → meaning question is silent too unless "Hear the word first" is on (hearing a word while you see its hanzi gives away the reading you should recall), and the sound → hanzi question always plays its word. After an answer, and when a flashcard is flipped, the word and its example sentence are spoken. Auto-play, speech speed and "hear the word first" are device settings in Review settings.
+Audio uses the browser's Web Speech API with a Mandarin system voice (Cantonese voices are skipped) at a fixed, slightly slow speed. It never plays something that gives away the answer: while you can see the hanzi, nothing is spoken, and only the sound → hanzi question plays by itself, because hearing the word is that question. After you answer, or when a flashcard is flipped, the word and its example sentence are spoken. The one audio setting is "Auto-play audio" (device setting in Review settings); a warning appears there only if the device has no Mandarin voice.
 
 ### Example sentences
 

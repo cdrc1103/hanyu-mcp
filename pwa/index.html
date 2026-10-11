@@ -143,7 +143,8 @@
         <div class="setting-row setting-row-inline">
           <div class="setting-text">
             <span class="setting-label" id="autoplay-label">Auto-play audio</span>
-            <span class="setting-desc" id="autoplay-desc">Speak words and sentences as you study</span>
+            <span class="setting-desc" id="autoplay-desc">Speak words and sentences after you answer or flip a card</span>
+            <span class="setting-desc voice-status hidden" id="voice-status"></span>
           </div>
           <button
             class="switch"
@@ -153,30 +154,6 @@
             aria-labelledby="autoplay-label"
             aria-describedby="autoplay-desc"
           ><span class="switch-knob" aria-hidden="true"></span></button>
-        </div>
-        <div class="setting-row setting-row-inline">
-          <div class="setting-text">
-            <span class="setting-label" id="audiofirst-label">Hear the word first</span>
-            <span class="setting-desc" id="audiofirst-desc">Off: hear a word only after you answer or flip. On: also play it while you see the hanzi (flashcards in Normal mode, hanzi → meaning quiz)</span>
-          </div>
-          <button
-            class="switch"
-            id="audiofirst-toggle"
-            role="switch"
-            aria-checked="false"
-            aria-labelledby="audiofirst-label"
-            aria-describedby="audiofirst-desc"
-          ><span class="switch-knob" aria-hidden="true"></span></button>
-        </div>
-        <div class="setting-row">
-          <span class="setting-label" id="rate-label">Speech speed</span>
-          <div class="segmented" id="rate-toggle" role="group" aria-labelledby="rate-label">
-            <button class="seg-btn" data-rate="0.6" aria-pressed="false">Slow</button>
-            <button class="seg-btn active" data-rate="0.8" aria-pressed="true">Normal</button>
-            <button class="seg-btn" data-rate="1" aria-pressed="false">Fast</button>
-          </div>
-          <p class="setting-desc voice-status" id="voice-status"></p>
-          <button class="link-btn voice-test" id="btn-voice-test" type="button">Test voice 🔊</button>
         </div>
 
         <!-- ReviewPeriodSelector -->
