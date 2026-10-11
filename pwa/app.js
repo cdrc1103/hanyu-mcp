@@ -371,14 +371,15 @@ const studyEl = {
 };
 
 const quiz = createQuiz(studyEl.quiz, {
-  submitReview,
   onProgress: (text) => {
     studyEl.progress.textContent = text;
   },
-  onFinish: (count) => {
-    reviewedCount = count;
+  onFinish: ({ asked, correct }) => {
     studyEl.quiz.classList.add("hidden");
     showStudyDone();
+    studyEl.doneCount.textContent = asked
+      ? `You answered ${asked} question${asked !== 1 ? "s" : ""}, ${correct} correct.`
+      : "You stopped before answering a question.";
   },
 });
 
@@ -405,23 +406,12 @@ async function loadStudy(reverse = false) {
   stopSpeaking();
   quiz.stop();
 
-  let deck = [];
+  if (activity === "quiz") return loadQuiz();
+
   try {
-    const params = new URLSearchParams();
-    if (createdAfter) params.set("created_after", createdAfter);
-    if (currentSessionId !== null) params.set("session_id", String(currentSessionId));
-    params.set("direction", studyDirection());
-    const res = await apiFetch(`/vocabulary/due?${params}`);
-    if (!res.ok) throw new Error("Failed to load due words");
-    dueCards = shuffle(applyHeisigFilter(await res.json()));
-    if (activity === "quiz" && dueCards.length > 0) deck = await fetchDeck();
+    dueCards = shuffle(applyHeisigFilter(await fetchDue(studyDirection())));
   } catch {
-    studyEl.loading.classList.add("hidden");
-    showErrorMsg(
-      studyEl.main,
-      "Failed to load words. Please try again.",
-      "You're offline. Please reconnect to study."
-    );
+    showLoadError();
     return;
   }
 
@@ -434,19 +424,57 @@ async function loadStudy(reverse = false) {
 
   currentCardIndex = 0;
   reviewedCount = 0;
+  showCard();
+}
 
-  if (activity === "quiz") {
-    if (deck.length < 4) {
-      studyEl.notice.textContent =
-        "The quiz needs at least 4 words in your deck. Try flashcards for now.";
-      studyEl.notice.classList.remove("hidden");
-      return;
-    }
-    studyEl.quiz.classList.remove("hidden");
-    quiz.start(dueCards, deck, reverseMode);
+async function fetchDue(direction) {
+  const params = new URLSearchParams();
+  if (createdAfter) params.set("created_after", createdAfter);
+  if (currentSessionId !== null) params.set("session_id", String(currentSessionId));
+  params.set("direction", direction);
+  const res = await apiFetch(`/vocabulary/due?${params}`);
+  if (!res.ok) throw new Error("Failed to load due words");
+  return res.json();
+}
+
+function showLoadError() {
+  studyEl.loading.classList.add("hidden");
+  showErrorMsg(
+    studyEl.main,
+    "Failed to load words. Please try again.",
+    "You're offline. Please reconnect to study."
+  );
+}
+
+// The quiz is not limited to due words: it loops over every word in the chosen
+// section (and review period) until you stop it. It is practice only and never
+// changes the flashcard schedule.
+async function loadQuiz() {
+  let deck;
+  try {
+    deck = await fetchDeck();
+  } catch {
+    showLoadError();
     return;
   }
-  showCard();
+  studyEl.loading.classList.add("hidden");
+
+  const cards = deck.filter(
+    (c) =>
+      (currentSessionId === null || c.session_id === currentSessionId) &&
+      (!createdAfter || c.created_at >= createdAfter)
+  );
+  if (deck.length < 4 || cards.length === 0) {
+    studyEl.notice.textContent =
+      deck.length < 4
+        ? "The quiz needs at least 4 words in your deck. Try flashcards for now."
+        : "No words in this section and review period.";
+    studyEl.notice.classList.remove("hidden");
+    return;
+  }
+  reviewedCount = 0;
+  studyEl.quiz.classList.remove("hidden");
+  quiz.start({ cards, fullDeck: deck });
 }
 
 function showCard() {
@@ -989,6 +1017,7 @@ syncHeisigToggle();
 // ── Activity (cards / quiz) ───────────────────────────────────────────────────
 const activityToggle = document.getElementById("activity-toggle");
 const studyCta = document.getElementById("btn-study");
+const activityDesc = document.getElementById("activity-desc");
 
 function syncActivity() {
   activityToggle.querySelectorAll(".seg-btn").forEach((b) => {
@@ -997,6 +1026,7 @@ function syncActivity() {
     b.setAttribute("aria-pressed", String(on));
   });
   studyCta.firstChild.textContent = activity === "quiz" ? "Start quiz " : "Start studying ";
+  activityDesc.classList.toggle("hidden", activity !== "quiz");
 }
 
 activityToggle.addEventListener("click", (e) => {

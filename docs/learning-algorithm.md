@@ -109,16 +109,14 @@ Both modes use the same SM-2 algorithm and quality scores, but each keeps its ow
 
 ## Quiz mode and audio
 
-"Practice → Quiz" on the home screen runs a multiple-choice quiz over the same due list as flashcards. The question kinds follow the Normal / Reverse toggle, so each answer updates the schedule of the direction it tests:
+"Practice → Quiz" on the home screen runs an endless multiple-choice quiz. It is practice only: it never reads or writes the SM-2 schedule, so quiz answers do not affect flashcard progress, and "due" does not limit what it asks.
 
-| Direction | Question kinds |
-|---|---|
-| Normal | hanzi → meaning, hanzi → pinyin |
-| Reverse | meaning → hanzi, pinyin → hanzi, sound → hanzi |
+- **Cards:** every word in the selected section and review period (not just due words).
+- **Questions:** hanzi → meaning, hanzi → pinyin, meaning → hanzi and sound → hanzi, picked at random per question (the Normal / Reverse toggle applies to flashcards only).
+- **Looping:** the cards are asked once each in a random order; then a new round starts with a fresh shuffle, until you press "End quiz" or leave. A summary shows how many you answered and how many were right.
+- **Options:** wrong options are other cards from the whole deck, preferring cards with the same character count.
 
-Wrong options are other cards from the deck, preferring cards with the same character count. Multiple choice is weaker evidence than a self-rated recall, so answers map to fixed qualities (`QUALITY` in `pwa/drill.js`): correct = 4 (never 5), wrong = 1. Only the first attempt on a card is submitted; a missed card is asked once more at the end of the session as practice.
-
-Audio uses the browser's Web Speech API with a Mandarin system voice (Cantonese voices are skipped). It never plays something that gives away the answer: the hanzi → pinyin, meaning → hanzi and pinyin → hanzi questions stay silent until answered, the hanzi → meaning question is silent too unless "Hear the word first" is on (hearing a word while you see its hanzi gives away the reading you should recall), and the sound → hanzi question always plays its word. After an answer, and when a flashcard is flipped, the word and its example sentence are spoken. Auto-play, speech speed and "hear the word first" are device settings in Review settings.
+Audio uses the browser's Web Speech API with a Mandarin system voice (Cantonese voices are skipped). It never plays something that gives away the answer: the hanzi → pinyin and meaning → hanzi questions stay silent until answered, the hanzi → meaning question is silent too unless "Hear the word first" is on (hearing a word while you see its hanzi gives away the reading you should recall), and the sound → hanzi question always plays its word. After an answer, and when a flashcard is flipped, the word and its example sentence are spoken. Auto-play, speech speed and "hear the word first" are device settings in Review settings.
 
 ### Example sentences
 

@@ -1,13 +1,9 @@
-// Multiple-choice quiz. The question kinds follow the Normal / Reverse study
-// toggle, so every answer updates the SM-2 schedule of the direction it tests:
-//   Normal : hanzi → meaning, hanzi → pinyin
-//   Reverse: meaning → hanzi, pinyin → hanzi, sound → hanzi
-import { shortMeaning, splitPinyin, toneSpans } from "./pinyin.js";
+// Multiple-choice quiz. It mixes four question kinds at random and loops over
+// the cards it is given, reshuffling every round, until it is stopped.
+//   hanzi → meaning, hanzi → pinyin, meaning → hanzi, sound → hanzi
+// It is practice only: answers never touch the flashcard (SM-2) schedule.
+import { shortMeaning, speakableText, splitPinyin, toneSpans } from "./pinyin.js";
 import { canSpeak, getSettings, speak, speakCard, stopSpeaking } from "./speech.js";
-
-// Multiple choice is weaker evidence than a self-rated recall, so a correct
-// answer never counts as "Easy" (5), and a miss is a clear failure.
-export const QUALITY = { right: 4, wrong: 1 };
 
 const OPTION_COUNT = 4;
 const SIMILAR_POOL = 8; // distractors are drawn from the N most similar cards
@@ -72,22 +68,14 @@ const KINDS = {
   hz2en: { label: meaningOf, hanziOptions: false, autoPrompt: "audioFirst" },
   hz2py: { label: pinyinOf, hanziOptions: false, autoPrompt: false },
   en2hz: { label: (c) => c.word, hanziOptions: true, autoPrompt: false },
-  py2hz: { label: (c) => c.word, hanziOptions: true, autoPrompt: false },
   snd2hz: { label: (c) => c.word, hanziOptions: true, autoPrompt: "always" },
 };
 
-function kindsFor(card, reverse) {
-  const hasPinyin = !!pinyinOf(card);
-  const hasMeaning = !!meaningOf(card);
+function kindsFor(card) {
   const kinds = [];
-  if (reverse) {
-    if (hasMeaning) kinds.push("en2hz");
-    if (hasPinyin) kinds.push("py2hz");
-    if (canSpeak()) kinds.push("snd2hz");
-  } else {
-    if (hasMeaning) kinds.push("hz2en");
-    if (hasPinyin) kinds.push("hz2py");
-  }
+  if (meaningOf(card)) kinds.push("hz2en", "en2hz");
+  if (pinyinOf(card)) kinds.push("hz2py");
+  if (canSpeak() && speakableText(card.word)) kinds.push("snd2hz");
   return kinds;
 }
 
@@ -112,8 +100,13 @@ function distractors(card, kind, pool) {
   return shuffle(candidates.slice(0, SIMILAR_POOL)).slice(0, OPTION_COUNT - 1);
 }
 
-function buildQuestion(card, reverse, pool) {
-  for (const kind of shuffle(kindsFor(card, reverse))) {
+// A random question kind for the card; the kind asked last time is tried last so
+// consecutive questions differ whenever the card allows it.
+function buildQuestion(card, pool, previousKind) {
+  const kinds = shuffle(kindsFor(card)).sort(
+    (a, b) => (a === previousKind ? 1 : 0) - (b === previousKind ? 1 : 0)
+  );
+  for (const kind of kinds) {
     const others = distractors(card, kind, pool);
     if (others.length === OPTION_COUNT - 1) {
       return { card, kind, options: shuffle([card, ...others]) };
@@ -124,13 +117,17 @@ function buildQuestion(card, reverse, pool) {
 
 // ── Quiz controller ───────────────────────────────────────────────────────────
 // root:   element the quiz renders into
-// hooks:  { submitReview(id, quality), onProgress(text), onFinish(count) }
+// hooks:  { onProgress(text), onFinish({asked, correct}) }
 export function createQuiz(root, hooks) {
+  let cards = [];
+  let pool = [];
   let queue = [];
   let index = 0;
-  let reviewed = 0;
-  let reverse = false;
-  let pool = [];
+  let round = 0;
+  let asked = 0;
+  let correctCount = 0;
+  let questionsThisRound = 0;
+  let previousKind = null;
   let current = null; // { question, answered, picked }
   let active = false;
 
@@ -141,33 +138,60 @@ export function createQuiz(root, hooks) {
     root.replaceChildren();
   }
 
-  function start(cards, fullDeck, isReverse) {
+  function finish() {
+    stop();
+    hooks.onFinish({ asked, correct: correctCount });
+  }
+
+  // cards: the cards to loop over; fullDeck: where wrong options come from.
+  function start({ cards: cardList, fullDeck }) {
     stop();
     active = true;
-    reverse = isReverse;
+    cards = cardList;
     pool = fullDeck;
-    queue = cards.map((card) => ({ card, retry: false }));
+    queue = [];
     index = 0;
-    reviewed = 0;
+    round = 0;
+    asked = 0;
+    correctCount = 0;
+    questionsThisRound = 0;
+    previousKind = null;
     document.addEventListener("keydown", onKey);
     next();
   }
 
+  // Begin a new round: every card once, in a fresh random order. The first card
+  // is never the one that ended the previous round.
+  function newRound() {
+    const last = queue[queue.length - 1];
+    queue = shuffle(cards);
+    if (queue.length > 1 && queue[0] === last) queue.push(queue.shift());
+    index = 0;
+    round++;
+    questionsThisRound = 0;
+  }
+
   function next() {
-    // Skip cards that can't make a question (e.g. no other card has a different answer).
-    while (index < queue.length) {
-      const item = queue[index];
-      const question = buildQuestion(item.card, reverse, pool);
+    // Skip cards that can't make a question (e.g. no other card has a different
+    // answer). A whole round without a single question ends the quiz instead of
+    // looping forever.
+    for (;;) {
+      if (index >= queue.length) {
+        if (round > 0 && questionsThisRound === 0) return finish();
+        newRound();
+      }
+      const card = queue[index];
+      const question = buildQuestion(card, pool, previousKind);
       if (question) {
-        current = { item, question, answered: false, picked: null };
-        hooks.onProgress(`${index + 1} / ${queue.length}`);
+        questionsThisRound++;
+        previousKind = question.kind;
+        current = { question, answered: false, picked: null };
+        hooks.onProgress(`Round ${round} · ${index + 1} / ${queue.length}`);
         renderQuestion();
         return;
       }
       index++;
     }
-    stop();
-    hooks.onFinish(reviewed);
   }
 
   function renderQuestion() {
@@ -201,9 +225,7 @@ export function createQuiz(root, hooks) {
     } else {
       prompt.append(
         h("p", { class: "quiz-label", text: "Which word is this?" }),
-        kind === "en2hz"
-          ? h("p", { class: "quiz-meaning", text: meaningOf(card) })
-          : h("p", { class: "quiz-pinyin", text: pinyin })
+        h("p", { class: "quiz-meaning", text: meaningOf(card) })
       );
     }
 
@@ -226,7 +248,17 @@ export function createQuiz(root, hooks) {
       opts.append(btn);
     });
 
-    root.replaceChildren(prompt, opts, h("div", { class: "quiz-result", "aria-live": "polite" }));
+    root.replaceChildren(
+      prompt,
+      opts,
+      h("div", { class: "quiz-result", "aria-live": "polite" }),
+      h("button", {
+        class: "link-btn quiz-stop",
+        type: "button",
+        text: "End quiz",
+        onclick: finish,
+      })
+    );
 
     // Called synchronously from the tap that got us here, which keeps iOS happy.
     // Hearing a word while you can see its hanzi gives away the reading you are
@@ -244,16 +276,11 @@ export function createQuiz(root, hooks) {
     if (!current || current.answered) return;
     current.answered = true;
     current.picked = pickedId;
-    const { item, question } = current;
+    const { question } = current;
     const { card } = question;
     const correct = pickedId === card.id;
-
-    // Only the first attempt counts for the schedule; a retry is just practice.
-    if (!item.retry) {
-      reviewed++;
-      hooks.submitReview(card.id, correct ? QUALITY.right : QUALITY.wrong);
-      if (!correct) queue.push({ card, retry: true });
-    }
+    asked++;
+    if (correct) correctCount++;
 
     for (const btn of root.querySelectorAll(".quiz-option")) {
       btn.disabled = true;
