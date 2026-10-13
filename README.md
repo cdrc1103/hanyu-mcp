@@ -39,7 +39,7 @@ Learning Chinese with an AI tutor works great — until the session ends and the
 
 | | |
 |---|---|
-| **4** MCP tools | `add_vocabulary`, `bulk_add_vocabulary`, `add_hanzi`, `delete_session` |
+| **5** MCP tools | `add_words`, `add_hanzi_cards`, `list_sections`, `list_words`, `delete_section` |
 | **50** words per call | Save an entire lesson in a single request |
 | **1 → 6 → 15 → 38 days** | Review intervals after consecutive Good, Good, Good, Easy ratings (SM-2) |
 | **2** independent schedules | Forward (hanzi → meaning) and reverse (pinyin → hanzi) progress are tracked separately |
