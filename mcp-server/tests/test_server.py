@@ -182,7 +182,7 @@ class TestAddWordsSection:
         """The superseded tool names are no longer registered."""
         names = {t.name for t in asyncio.run(srv.mcp.list_tools())}
         assert names.isdisjoint({"add_vocabulary", "bulk_add_vocabulary", "delete_session", "add_hanzi"})
-        assert {"add_words", "add_hanzi_cards", "list_sections", "list_words", "delete_section"} <= names
+        assert {"add_words", "save_character_cards", "list_sections", "list_words", "delete_section"} <= names
 
 
 # ---------------------------------------------------------------------------
@@ -284,20 +284,20 @@ _CARD = {
 }
 
 
-class TestAddHanziCards:
-    """Tests for the add_hanzi_cards MCP tool."""
+class TestSaveCharacterCards:
+    """Tests for the save_character_cards MCP tool."""
 
     def test_tool_registered(self):
-        """add_hanzi_cards tool is registered."""
+        """save_character_cards tool is registered."""
         tools = asyncio.run(srv.mcp.list_tools())
         names = {t.name for t in tools}
-        assert "add_hanzi_cards" in names
+        assert "save_character_cards" in names
 
     def test_posts_to_hanzi_bulk_endpoint(self):
-        """add_hanzi_cards calls the /vocabulary/hanzi/bulk endpoint."""
+        """save_character_cards calls the /vocabulary/hanzi/bulk endpoint."""
         mock_post = AsyncMock(return_value=_hanzi_bulk_response(1, 0, 0))
         with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(srv.add_hanzi_cards([_CARD]))
+            asyncio.run(srv.save_character_cards([_CARD]))
         args, _ = mock_post.call_args
         assert "/vocabulary/hanzi/bulk" in args[0]
 
@@ -306,14 +306,14 @@ class TestAddHanziCards:
         with patch.object(
             srv._http_client, "post", new=AsyncMock(return_value=_hanzi_bulk_response(3, 5, 2))
         ):
-            result = asyncio.run(srv.add_hanzi_cards([_CARD]))
+            result = asyncio.run(srv.save_character_cards([_CARD]))
         assert "3" in result and "5" in result and "2" in result
 
     def test_maps_hanzi_field_to_word(self):
         """The 'hanzi' field is sent to the backend as 'word'."""
         mock_post = AsyncMock(return_value=_hanzi_bulk_response(1, 0, 0))
         with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(srv.add_hanzi_cards([_CARD]))
+            asyncio.run(srv.save_character_cards([_CARD]))
         _, kwargs = mock_post.call_args
         assert kwargs["json"]["cards"][0]["word"] == "明"
 
@@ -322,7 +322,7 @@ class TestAddHanziCards:
         mock_post = AsyncMock()
         bad = {**_CARD, "tone": 9}
         with patch.object(srv._http_client, "post", new=mock_post):
-            result = asyncio.run(srv.add_hanzi_cards([bad]))
+            result = asyncio.run(srv.save_character_cards([bad]))
         assert "Invalid" in result or "valid" in result.lower()
         mock_post.assert_not_called()
 
@@ -409,3 +409,8 @@ class TestListWords:
         """list_words converts failures to a message."""
         with patch.object(srv._http_client, "get", new=AsyncMock(side_effect=Exception("down"))):
             assert "Failed" in asyncio.run(srv.list_words())
+
+    def test_multi_character_word_rejected(self):
+        """hanzi must be a single character; words belong in add_words."""
+        with pytest.raises(ValidationError):
+            server_heisig.HanziInput(hanzi="明天", keyword="tomorrow", pinyin="míngtiān", tone=2)

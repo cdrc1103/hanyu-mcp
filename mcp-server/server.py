@@ -262,7 +262,7 @@ async def delete_section(section_name: str) -> str:
 
 # ── Heisig tools (registered from server_heisig) ─────────────────────────────
 
-add_hanzi_cards = register_tools(mcp, _http_client, VOCAB_API_URL, VOCAB_API_KEY)
+save_character_cards = register_tools(mcp, _http_client, VOCAB_API_URL, VOCAB_API_KEY)
 
 # ── Custom routes (unprotected) ───────────────────────────────────────────────
 
