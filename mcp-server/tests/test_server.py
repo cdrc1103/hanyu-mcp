@@ -27,16 +27,16 @@ def _make_response(status_code: int, json_body: dict) -> httpx.Response:
     )
 
 
-class TestBulkToolRegistration:
-    def test_bulk_add_vocabulary_tool_registered(self):
-        """Test that bulk_add_vocabulary tool is registered with MCP server."""
+class TestAddWordsRegistration:
+    def test_add_words_tool_registered(self):
+        """Test that add_words tool is registered with MCP server."""
         tools = asyncio.run(srv.mcp.list_tools())
-        assert any(t.name == "bulk_add_vocabulary" for t in tools)
+        assert any(t.name == "add_words" for t in tools)
 
-    def test_bulk_schema_requires_words(self):
+    def test_schema_requires_words(self):
         """Test that words array with word and definition are required."""
         tools = asyncio.run(srv.mcp.list_tools())
-        tool = next(t for t in tools if t.name == "bulk_add_vocabulary")
+        tool = next(t for t in tools if t.name == "add_words")
         schema = tool.inputSchema
         assert "words" in schema["required"]
         items = schema["properties"]["words"]["items"]
@@ -61,13 +61,13 @@ class TestBulkToolRegistration:
         assert "pinyin" in item_required
 
 
-class TestBulkAddVocabularySuccess:
+class TestAddWordsSuccess:
     def test_returns_summary_message(self):
         """Test bulk add returns summary message with insertion count."""
         fake = _make_response(201, {"inserted": [{"word": "a"}, {"word": "b"}], "skipped_count": 0})
         with patch.object(srv._http_client, "post", new=AsyncMock(return_value=fake)):
             result = asyncio.run(
-                srv.bulk_add_vocabulary(
+                srv.add_words(
                     [
                         {"word": "a", "pinyin": "pīnyīn", "definition": "a"},
                         {"word": "b", "pinyin": "pīnyīn", "definition": "b"},
@@ -82,7 +82,7 @@ class TestBulkAddVocabularySuccess:
         fake = _make_response(201, {"inserted": [{"word": "b"}], "skipped_count": 1})
         with patch.object(srv._http_client, "post", new=AsyncMock(return_value=fake)):
             result = asyncio.run(
-                srv.bulk_add_vocabulary(
+                srv.add_words(
                     [
                         {"word": "a", "pinyin": "pīnyīn", "definition": "a"},
                         {"word": "b", "pinyin": "pīnyīn", "definition": "b"},
@@ -96,7 +96,7 @@ class TestBulkAddVocabularySuccess:
         fake = _make_response(201, {"inserted": [], "skipped_count": 0})
         mock_post = AsyncMock(return_value=fake)
         with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(srv.bulk_add_vocabulary([{"word": "x", "pinyin": "pīnyīn", "definition": "y"}]))
+            asyncio.run(srv.add_words([{"word": "x", "pinyin": "pīnyīn", "definition": "y"}]))
         args, kwargs = mock_post.call_args
         assert "/vocabulary/bulk" in args[0]
 
@@ -105,12 +105,12 @@ class TestBulkAddVocabularySuccess:
         fake = _make_response(201, {"inserted": [], "skipped_count": 0})
         mock_post = AsyncMock(return_value=fake)
         with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(srv.bulk_add_vocabulary([{"word": "x", "pinyin": "pīnyīn", "definition": "y"}]))
+            asyncio.run(srv.add_words([{"word": "x", "pinyin": "pīnyīn", "definition": "y"}]))
         _, kwargs = mock_post.call_args
         assert kwargs["headers"]["X-API-Key"] == "test-key"
 
 
-class TestBulkAddVocabularyErrors:
+class TestAddWordsErrors:
     def test_http_error_returns_error_message(self):
         """Test bulk add HTTP errors are converted to error messages."""
         error_resp = _make_response(422, {"detail": "too many words"})
@@ -121,7 +121,7 @@ class TestBulkAddVocabularyErrors:
                 side_effect=httpx.HTTPStatusError("err", request=MagicMock(), response=error_resp)
             ),
         ):
-            result = asyncio.run(srv.bulk_add_vocabulary([{"word": "x", "pinyin": "pīnyīn", "definition": "y"}]))
+            result = asyncio.run(srv.add_words([{"word": "x", "pinyin": "pīnyīn", "definition": "y"}]))
         assert "Failed" in result
         assert "422" in result
 
@@ -132,7 +132,7 @@ class TestBulkAddVocabularyErrors:
             "post",
             new=AsyncMock(side_effect=Exception("connection refused")),
         ):
-            result = asyncio.run(srv.bulk_add_vocabulary([{"word": "x", "pinyin": "pīnyīn", "definition": "y"}]))
+            result = asyncio.run(srv.add_words([{"word": "x", "pinyin": "pīnyīn", "definition": "y"}]))
         assert "Failed" in result
 
 
@@ -141,121 +141,52 @@ class TestBulkAddVocabularyErrors:
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
-# session_name forwarding
+# section_name forwarding
 # ---------------------------------------------------------------------------
 
 
-class TestAddVocabularySession:
-    def test_session_name_forwarded_to_api(self):
-        """Test add_vocabulary passes session_name in request body."""
-        fake = _make_response(
-            201,
-            {
-                "id": 1,
-                "word": "hola",
-                "pinyin": "pīnyīn",
-                "definition": "hello",
-                "language": "es",
-                "created_at": "2026-06-20 10:00:00",
-                "next_review": "2026-06-20",
-                "interval": 1,
-                "ease_factor": 2.5,
-                "repetitions": 0,
-                "session_id": 2,
-                "session_name": "Spanish 1",
-            },
-        )
+class TestAddWordsSection:
+    def test_section_name_injected_into_all_words(self):
+        """Test add_words sends the section name as session_name on every word."""
+        fake = _make_response(201, {"inserted": [], "skipped_count": 0})
         mock_post = AsyncMock(return_value=fake)
         with patch.object(srv._http_client, "post", new=mock_post):
             asyncio.run(
-                srv.add_vocabulary(word="hola", pinyin="pīnyīn", definition="hello", session_name="Spanish 1")
+                srv.add_words(
+                    words=[{"word": "a", "pinyin": "pīnyīn", "definition": "a"}, {"word": "b", "pinyin": "pīnyīn", "definition": "b"}],
+                    section_name="HSK 3 travel",
+                )
             )
         _, kwargs = mock_post.call_args
-        assert kwargs["json"]["session_name"] == "Spanish 1"
+        assert all(w["session_name"] == "HSK 3 travel" for w in kwargs["json"]["words"])
+
+    def test_no_section_name_sends_none(self):
+        """Test add_words sends session_name=None when no section is given."""
+        fake = _make_response(201, {"inserted": [], "skipped_count": 0})
+        mock_post = AsyncMock(return_value=fake)
+        with patch.object(srv._http_client, "post", new=mock_post):
+            asyncio.run(srv.add_words(words=[{"word": "a", "pinyin": "pīnyīn", "definition": "a"}]))
+        _, kwargs = mock_post.call_args
+        assert kwargs["json"]["words"][0]["session_name"] is None
 
     def test_pinyin_forwarded_as_separate_field(self):
-        """Test add_vocabulary sends pinyin separately from the definition."""
-        mock_post = AsyncMock(return_value=_make_response(201, {}))
+        """Test add_words sends pinyin separately from the definition."""
+        mock_post = AsyncMock(return_value=_make_response(201, {"inserted": [], "skipped_count": 0}))
         with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(srv.add_vocabulary(word="变化", pinyin="biànhuà", definition="change"))
+            asyncio.run(srv.add_words([{"word": "变化", "pinyin": "biànhuà", "definition": "change"}]))
         _, kwargs = mock_post.call_args
-        assert kwargs["json"]["pinyin"] == "biànhuà"
-        assert kwargs["json"]["definition"] == "change"
+        assert kwargs["json"]["words"][0]["pinyin"] == "biànhuà"
+        assert kwargs["json"]["words"][0]["definition"] == "change"
 
-    def test_none_session_name_sent_as_none(self):
-        """Test add_vocabulary sends session_name=None when not specified."""
-        fake = _make_response(
-            201,
-            {
-                "id": 1,
-                "word": "x",
-                "pinyin": "pīnyīn",
-                "definition": "y",
-                "language": "unknown",
-                "created_at": "2026-06-20 10:00:00",
-                "next_review": "2026-06-20",
-                "interval": 1,
-                "ease_factor": 2.5,
-                "repetitions": 0,
-                "session_id": 1,
-                "session_name": "misc",
-            },
-        )
-        mock_post = AsyncMock(return_value=fake)
-        with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(srv.add_vocabulary(word="x", pinyin="pīnyīn", definition="y"))
-        _, kwargs = mock_post.call_args
-        assert kwargs["json"]["session_name"] is None
-
-
-class TestBulkAddVocabularySession:
-    def test_session_name_injected_into_all_words(self):
-        """Test bulk_add_vocabulary injects session_name into each word when provided."""
-        fake = _make_response(201, {"inserted": [], "skipped_count": 0})
-        mock_post = AsyncMock(return_value=fake)
-        with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(
-                srv.bulk_add_vocabulary(
-                    words=[{"word": "a", "pinyin": "pīnyīn", "definition": "a"}, {"word": "b", "pinyin": "pīnyīn", "definition": "b"}],
-                    session_name="Japanese N5",
-                )
-            )
-        _, kwargs = mock_post.call_args
-        sent_words = kwargs["json"]["words"]
-        assert all(w["session_name"] == "Japanese N5" for w in sent_words)
-
-    def test_no_session_name_sends_words_unchanged(self):
-        """Test bulk_add_vocabulary sends words without injection when session_name is None."""
-        fake = _make_response(201, {"inserted": [], "skipped_count": 0})
-        mock_post = AsyncMock(return_value=fake)
-        with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(
-                srv.bulk_add_vocabulary(
-                    words=[{"word": "a", "pinyin": "pīnyīn", "definition": "a", "session_name": "per-word-session"}]
-                )
-            )
-        _, kwargs = mock_post.call_args
-        sent_words = kwargs["json"]["words"]
-        assert sent_words[0]["session_name"] == "per-word-session"
-
-    def test_top_level_session_name_overrides_per_word_session_name(self):
-        """Test bulk_add_vocabulary top-level session_name overrides per-word session_name."""
-        fake = _make_response(201, {"inserted": [], "skipped_count": 0})
-        mock_post = AsyncMock(return_value=fake)
-        with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(
-                srv.bulk_add_vocabulary(
-                    words=[{"word": "a", "pinyin": "pīnyīn", "definition": "a", "session_name": "old-session"}],
-                    session_name="new-session",
-                )
-            )
-        _, kwargs = mock_post.call_args
-        sent_words = kwargs["json"]["words"]
-        assert sent_words[0]["session_name"] == "new-session"
+    def test_old_tool_names_are_gone(self):
+        """The superseded tool names are no longer registered."""
+        names = {t.name for t in asyncio.run(srv.mcp.list_tools())}
+        assert names.isdisjoint({"add_vocabulary", "bulk_add_vocabulary", "delete_session", "add_hanzi"})
+        assert {"add_words", "add_hanzi_cards", "list_sections", "list_words", "delete_section"} <= names
 
 
 # ---------------------------------------------------------------------------
-# delete_session helpers
+# delete_section helpers
 # ---------------------------------------------------------------------------
 
 
@@ -267,7 +198,7 @@ def _make_sessions_response(sessions: list[dict]) -> httpx.Response:
     )
 
 
-def _make_delete_session_response(status_code: int, json_body: dict) -> httpx.Response:
+def _make_delete_section_response(status_code: int, json_body: dict) -> httpx.Response:
     return httpx.Response(
         status_code=status_code,
         json=json_body,
@@ -280,37 +211,37 @@ _SESSIONS = [
 ]
 
 
-class TestDeleteSession:
-    def test_delete_session_tool_is_registered(self):
-        """Test that delete_session tool is registered with MCP server."""
+class TestDeleteSection:
+    def test_delete_section_tool_is_registered(self):
+        """Test that delete_section tool is registered with MCP server."""
         tools = asyncio.run(srv.mcp.list_tools())
-        assert any(t.name == "delete_session" for t in tools)
+        assert any(t.name == "delete_section" for t in tools)
 
-    def test_returns_success_message_with_session_name_and_count(self):
-        """Test delete_session returns message containing session name and deleted word count."""
+    def test_returns_success_message_with_section_name_and_count(self):
+        """Test delete_section returns message containing section name and deleted word count."""
         sessions_resp = _make_sessions_response(_SESSIONS)
-        delete_resp = _make_delete_session_response(200, {"deleted_words": 3})
+        delete_resp = _make_delete_section_response(200, {"deleted_words": 3})
         with (
             patch.object(srv._http_client, "get", new=AsyncMock(return_value=sessions_resp)),
             patch.object(srv._http_client, "delete", new=AsyncMock(return_value=delete_resp)),
         ):
-            result = asyncio.run(srv.delete_session("Spanish 1"))
+            result = asyncio.run(srv.delete_section("Spanish 1"))
         assert "Spanish 1" in result
         assert "3" in result
         assert "Deleted" in result
 
-    def test_returns_not_found_when_session_name_absent(self):
-        """Test delete_session returns not-found message when name not in GET /sessions."""
+    def test_returns_not_found_when_section_name_absent(self):
+        """Test delete_section returns not-found message when name not in GET /sessions."""
         sessions_resp = _make_sessions_response(_SESSIONS)
         with patch.object(srv._http_client, "get", new=AsyncMock(return_value=sessions_resp)):
-            result = asyncio.run(srv.delete_session("French 1"))
+            result = asyncio.run(srv.delete_section("French 1"))
         assert "not found" in result.lower()
         assert "French 1" in result
 
     def test_http_error_on_delete_returns_error_message(self):
-        """Test delete_session returns error message on HTTP error from delete endpoint."""
+        """Test delete_section returns error message on HTTP error from delete endpoint."""
         sessions_resp = _make_sessions_response(_SESSIONS)
-        error_resp = _make_delete_session_response(500, {"detail": "server error"})
+        error_resp = _make_delete_section_response(500, {"detail": "server error"})
         with (
             patch.object(srv._http_client, "get", new=AsyncMock(return_value=sessions_resp)),
             patch.object(
@@ -323,16 +254,16 @@ class TestDeleteSession:
                 ),
             ),
         ):
-            result = asyncio.run(srv.delete_session("Spanish 1"))
+            result = asyncio.run(srv.delete_section("Spanish 1"))
         assert "Failed" in result
         assert "500" in result
 
     def test_network_error_returns_error_message(self):
-        """Test delete_session returns error message on network failure during GET /sessions."""
+        """Test delete_section returns error message on network failure during GET /sessions."""
         with patch.object(
             srv._http_client, "get", new=AsyncMock(side_effect=Exception("connection refused"))
         ):
-            result = asyncio.run(srv.delete_session("Spanish 1"))
+            result = asyncio.run(srv.delete_section("Spanish 1"))
         assert "Failed" in result
 
 
@@ -353,20 +284,20 @@ _CARD = {
 }
 
 
-class TestAddHanzi:
-    """Tests for the add_hanzi MCP tool."""
+class TestAddHanziCards:
+    """Tests for the add_hanzi_cards MCP tool."""
 
     def test_tool_registered(self):
-        """add_hanzi tool is registered."""
+        """add_hanzi_cards tool is registered."""
         tools = asyncio.run(srv.mcp.list_tools())
         names = {t.name for t in tools}
-        assert "add_hanzi" in names
+        assert "add_hanzi_cards" in names
 
     def test_posts_to_hanzi_bulk_endpoint(self):
-        """add_hanzi calls the /vocabulary/hanzi/bulk endpoint."""
+        """add_hanzi_cards calls the /vocabulary/hanzi/bulk endpoint."""
         mock_post = AsyncMock(return_value=_hanzi_bulk_response(1, 0, 0))
         with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(srv.add_hanzi([_CARD]))
+            asyncio.run(srv.add_hanzi_cards([_CARD]))
         args, _ = mock_post.call_args
         assert "/vocabulary/hanzi/bulk" in args[0]
 
@@ -375,14 +306,14 @@ class TestAddHanzi:
         with patch.object(
             srv._http_client, "post", new=AsyncMock(return_value=_hanzi_bulk_response(3, 5, 2))
         ):
-            result = asyncio.run(srv.add_hanzi([_CARD]))
+            result = asyncio.run(srv.add_hanzi_cards([_CARD]))
         assert "3" in result and "5" in result and "2" in result
 
     def test_maps_hanzi_field_to_word(self):
         """The 'hanzi' field is sent to the backend as 'word'."""
         mock_post = AsyncMock(return_value=_hanzi_bulk_response(1, 0, 0))
         with patch.object(srv._http_client, "post", new=mock_post):
-            asyncio.run(srv.add_hanzi([_CARD]))
+            asyncio.run(srv.add_hanzi_cards([_CARD]))
         _, kwargs = mock_post.call_args
         assert kwargs["json"]["cards"][0]["word"] == "明"
 
@@ -391,7 +322,7 @@ class TestAddHanzi:
         mock_post = AsyncMock()
         bad = {**_CARD, "tone": 9}
         with patch.object(srv._http_client, "post", new=mock_post):
-            result = asyncio.run(srv.add_hanzi([bad]))
+            result = asyncio.run(srv.add_hanzi_cards([bad]))
         assert "Invalid" in result or "valid" in result.lower()
         mock_post.assert_not_called()
 
@@ -408,3 +339,73 @@ class TestHanziInputModel:
         """tone outside 1..5 raises ValidationError."""
         with pytest.raises(ValidationError):
             server_heisig.HanziInput(hanzi="x", keyword="k", pinyin="p", tone=0)
+
+
+class TestListSections:
+    def test_lists_names_and_dates(self):
+        """list_sections returns one line per section."""
+        resp = _make_sessions_response(_SESSIONS)
+        with patch.object(srv._http_client, "get", new=AsyncMock(return_value=resp)):
+            result = asyncio.run(srv.list_sections())
+        assert "Spanish 1" in result and "2026-06-28" in result
+
+    def test_empty(self):
+        """list_sections reports when nothing exists."""
+        resp = _make_sessions_response([])
+        with patch.object(srv._http_client, "get", new=AsyncMock(return_value=resp)):
+            assert "No sections" in asyncio.run(srv.list_sections())
+
+    def test_error(self):
+        """list_sections converts failures to a message."""
+        with patch.object(srv._http_client, "get", new=AsyncMock(side_effect=Exception("down"))):
+            assert "Failed" in asyncio.run(srv.list_sections())
+
+
+def _words_response(words: list[dict], total: int | None = None) -> httpx.Response:
+    return httpx.Response(
+        status_code=200,
+        json={"total": len(words) if total is None else total, "words": words},
+        request=httpx.Request("GET", "http://test-backend/vocabulary"),
+    )
+
+
+_WORD = {"word": "变化", "pinyin": "biànhuà", "definition": "change", "session_name": "Spanish 1"}
+
+
+class TestListWords:
+    def test_lists_words_with_total(self):
+        """list_words shows total and one line per word."""
+        mock_get = AsyncMock(return_value=_words_response([_WORD], total=7))
+        with patch.object(srv._http_client, "get", new=mock_get):
+            result = asyncio.run(srv.list_words())
+        assert "7 words total" in result
+        assert "变化 (biànhuà): change" in result
+
+    def test_section_name_resolved_to_session_id(self):
+        """list_words resolves the section name and filters by session_id."""
+        mock_get = AsyncMock(side_effect=[_make_sessions_response(_SESSIONS), _words_response([])])
+        with patch.object(srv._http_client, "get", new=mock_get):
+            asyncio.run(srv.list_words(section_name="Spanish 1"))
+        _, kwargs = mock_get.call_args
+        assert kwargs["params"]["session_id"] == 1
+
+    def test_unknown_section_not_found(self):
+        """list_words reports an unknown section without querying words."""
+        mock_get = AsyncMock(return_value=_make_sessions_response(_SESSIONS))
+        with patch.object(srv._http_client, "get", new=mock_get):
+            result = asyncio.run(srv.list_words(section_name="French 1"))
+        assert "not found" in result.lower()
+        assert mock_get.call_count == 1
+
+    def test_limit_is_clamped(self):
+        """list_words never asks the backend for more than 200 words."""
+        mock_get = AsyncMock(return_value=_words_response([]))
+        with patch.object(srv._http_client, "get", new=mock_get):
+            asyncio.run(srv.list_words(limit=5000))
+        _, kwargs = mock_get.call_args
+        assert kwargs["params"]["limit"] == 200
+
+    def test_error(self):
+        """list_words converts failures to a message."""
+        with patch.object(srv._http_client, "get", new=AsyncMock(side_effect=Exception("down"))):
+            assert "Failed" in asyncio.run(srv.list_words())

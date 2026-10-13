@@ -7,7 +7,7 @@ A full-stack spaced-repetition vocabulary study system. An AI assistant can push
 | Component | Description |
 |-----------|-------------|
 | `backend/` | FastAPI + SQLite REST API |
-| `mcp-server/` | MCP server exposing `add_vocabulary` to AI assistants |
+| `mcp-server/` | MCP server exposing vocabulary tools to AI assistants |
 | `pwa/` | Installable PWA flashcard study app |
 
 ---
@@ -132,7 +132,7 @@ Host the `pwa/` folder as a static site on any static hosting provider. The site
 
 ```
 AI Assistant
-  │  MCP tool: add_vocabulary
+  │  MCP tool: add_words
   ▼
 MCP Server (local) — POST /vocabulary
   ▼

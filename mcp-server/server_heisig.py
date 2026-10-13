@@ -1,6 +1,6 @@
 """Heisig hanzi MCP tools and input models.
 
-Registers the add_hanzi tool against a FastMCP instance. General-purpose
+Registers the add_hanzi_cards tool against a FastMCP instance. General-purpose
 vocabulary tools live in server.py.
 """
 
@@ -47,18 +47,18 @@ def register_tools(
         vocab_api_key: API key for backend authentication.
 
     Returns:
-        The add_hanzi tool function, for direct access in tests.
+        The add_hanzi_cards tool function, for direct access in tests.
     """
 
     @mcp.tool(
         description=(
-            "Add or enrich Heisig hanzi study cards (max 50). Each card needs the hanzi, a single "
+            "Add or enrich Heisig hanzi study cards — one card per single character (max 50). Each card needs the hanzi, a single "
             "English keyword (meaning only), pinyin with tone mark, and the tone number 1-5. "
             "Re-calling on a character that already exists enriches it in place and preserves "
-            "its review schedule. Pass session_name to group NEW cards; existing cards keep their session."
+            "its review schedule. Pass section_name to group NEW cards; existing cards keep their section."
         )
     )
-    async def add_hanzi(cards: list[HanziInput], session_name: str | None = None) -> str:
+    async def add_hanzi_cards(cards: list[HanziInput], section_name: str | None = None) -> str:
         """Create or enrich Heisig hanzi cards via the backend upsert endpoint.
 
         Validates every card against HanziInput before sending. Maps the 'hanzi' field to
@@ -66,7 +66,7 @@ def register_tools(
 
         Args:
             cards: List of HanziInput cards (1-50).
-            session_name: Optional session for newly created cards only.
+            section_name: Optional section for newly created cards only.
 
         Returns:
             A summary message with created/enriched/unchanged counts, or an error message.
@@ -85,7 +85,7 @@ def register_tools(
         try:
             response = await http_client.post(
                 f"{vocab_api_url}/vocabulary/hanzi/bulk",
-                json={"cards": payload_cards, "session_name": session_name},
+                json={"cards": payload_cards, "session_name": section_name},
                 headers={"X-API-Key": vocab_api_key},
                 timeout=30.0,
             )
@@ -100,4 +100,4 @@ def register_tools(
         except Exception as e:
             return f"Failed to save hanzi: {e}"
 
-    return add_hanzi
+    return add_hanzi_cards
