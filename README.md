@@ -45,7 +45,6 @@ Learning Chinese with an AI tutor works great — until the session ends and the
 | **2** independent schedules | Forward (hanzi → meaning) and reverse (pinyin → hanzi) progress are tracked separately |
 | **4** quiz question types | Hanzi → meaning, hanzi → pinyin, meaning → hanzi, sound → hanzi |
 | **0** build steps, **0** frontend dependencies | The PWA is plain HTML, CSS and JavaScript |
-| **200+** automated tests | Backend and MCP server, plus a weekly dependency security audit |
 
 ## ✨ Features
 
