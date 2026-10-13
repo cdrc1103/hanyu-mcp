@@ -4,7 +4,7 @@
 
 # Hanyu MCP
 
-### Learn Chinese vocabulary with Claude — and never forget it.
+### Learn Chinese vocabulary with your AI tutor — and never forget it.
 
 **Save words from any AI chat straight into a spaced-repetition flashcard app on your phone.**
 Self-hosted · open source · Mandarin (hanzi, pinyin, tones) · SM-2 scheduling · MCP-native
@@ -64,7 +64,7 @@ Learning Chinese with an AI tutor works great — until the session ends and the
 
 **For builders**
 
-- 🔌 **MCP-native** — a remote MCP server that any client with OAuth 2.1 support can use (Claude.ai, ChatGPT and others).
+- 🔌 **MCP-native** — a remote MCP server that works with any MCP client supporting OAuth 2.1, whichever AI provider you use.
 - 🔐 **Real authentication** — OAuth 2.1 with PKCE and Dynamic Client Registration on the MCP server, an API key between services, and a JWT for the PWA. The API key never reaches the browser.
 - 🧩 **Small, readable stack** — FastAPI + SQLite, no ORM, no frontend build tooling.
 - ⚙️ **Duplicate-safe bulk import** — repeated words are skipped and reported.
@@ -75,7 +75,7 @@ Learning Chinese with an AI tutor works great — until the session ends and the
  You ──► "Save today's words"
           │
           ▼
-   AI assistant (Claude, …)
+   Any MCP-capable AI assistant
           │  MCP tools over OAuth 2.1
           ▼
    MCP server ──────────────►  Backend API (FastAPI)  ──►  SQLite
@@ -155,7 +155,7 @@ EOF
 uv run --env-file .env python server.py
 ```
 
-To use it from Claude.ai, ChatGPT or another remote-MCP client, deploy it to a public HTTPS URL and add that URL as a custom connector. The client discovers the OAuth endpoints automatically and you sign in with `MCP_SECRET`. Then just ask:
+To use it from any remote-MCP client, deploy it to a public HTTPS URL and add that URL as a custom connector. The client discovers the OAuth endpoints automatically and you sign in with `MCP_SECRET`. Then just ask:
 
 > *"Save 变化 (biànhuà, "change") to my vocab deck with an example sentence."*
 
@@ -172,7 +172,7 @@ Full production walkthrough (Railway + Cloudflare Pages): **[docs/deployment.md]
 
 ## 🤖 Make your AI tutor a better note-taker
 
-[`docs/skills/chinese-vocab-push/SKILL.md`](docs/skills/chinese-vocab-push/SKILL.md) is a ready-made Claude skill. At the end of a tutoring session it asks whether you want regular word cards or single-character Heisig cards, then saves every word with pinyin and an example sentence that shows *how* the word is used.
+[`docs/skills/chinese-vocab-push/SKILL.md`](docs/skills/chinese-vocab-push/SKILL.md) is a ready-made skill (agent instructions) you can adapt to your assistant. At the end of a tutoring session it asks whether you want regular word cards or single-character Heisig cards, then saves every word with pinyin and an example sentence that shows *how* the word is used.
 
 ## 📚 Documentation
 
@@ -200,4 +200,4 @@ Linting and formatting use [Ruff](https://docs.astral.sh/ruff/) (Python) and [Bi
 
 ---
 
-<sub>Keywords: learn Chinese, Mandarin flashcards, HSK vocabulary, spaced repetition, SM-2, Heisig, pinyin, hanzi, MCP server, Model Context Protocol, Claude, AI language tutor, self-hosted, FastAPI, progressive web app.</sub>
+<sub>Keywords: learn Chinese, Mandarin flashcards, HSK vocabulary, spaced repetition, SM-2, Heisig, pinyin, hanzi, MCP server, Model Context Protocol, LLM, AI language tutor, self-hosted, FastAPI, progressive web app.</sub>
