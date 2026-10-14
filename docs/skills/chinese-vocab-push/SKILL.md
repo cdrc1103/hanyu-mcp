@@ -4,8 +4,8 @@ description: >
   Push Chinese vocabulary words to the Vocabulary App MCP at the end of a Chinese tutoring session.
   Use this skill whenever the user says "wrap up", "end session", "save vocab", "push vocab", "add words to app",
   or any similar phrase indicating the session is ending and vocabulary should be saved.
-  Always ask the student whether they want regular word cards (bulk_add_vocabulary) or single-character
-  Heisig-style cards (add_hanzi) — never omit Pinyin, never skip the example sentence.
+  Always ask the student whether they want regular word cards (add_words) or single-character
+  Heisig-style cards (save_character_cards) — never omit Pinyin, never skip the example sentence.
   Example sentences must show the context and grammar situation a word is used in.
   This skill MUST be used at end-of-session; do not add vocab word by word during the session.
 ---
@@ -29,7 +29,7 @@ Save all new Chinese vocabulary introduced during a tutoring session to the Voca
 | `example_pinyin` | Pinyin of the example sentence with tone marks, word-spaced, capitalised first letter, with punctuation — e.g. `Wǒ xiàng jīnglǐ qǐng le yì tiān jià.` |
 | `example_translation` | Natural English translation of the example — e.g. `I asked the manager for one day off.` |
 | `language` | Always `"zh"` |
-| `session_name` | All lowercase, no hyphens, no difficulty level, 1–3 words — e.g. `"daily routines"` or `"feelings"` |
+| `section_name` (top-level parameter, not per word) | All lowercase, no hyphens, no difficulty level, 1–3 words — e.g. `"daily routines"` or `"feelings"` |
 
 The three example fields are separate. **Never** put the pinyin or the English into `example` — the app speaks the `example` field aloud and would read them out.
 
@@ -43,8 +43,7 @@ The three example fields are separate. **Never** put the pinyin or the English i
   "example": "我向经理请了一天假。",
   "example_pinyin": "Wǒ xiàng jīnglǐ qǐng le yì tiān jià.",
   "example_translation": "I asked the manager for one day off.",
-  "language": "zh",
-  "session_name": "work life"
+  "language": "zh"
 }
 ```
 
@@ -82,7 +81,7 @@ Heisig cards save one card per **individual hanzi** (not per word), each with a 
 
 ### Steps
 
-1. **Explode the word list into unique characters.** Take every new word/phrase from the session, split it into individual hanzi, and dedupe (e.g. `预约` + `座位` → `预`, `约`, `座`, `位`). Characters that already exist as cards are simply enriched in place by `add_hanzi`, which is fine.
+1. **Explode the word list into unique characters.** Take every new word/phrase from the session, split it into individual hanzi, and dedupe (e.g. `预约` + `座位` → `预`, `约`, `座`, `位`). Characters that already exist as cards are simply enriched in place by `save_character_cards`, which is fine.
 
 2. **For each character, build a card with:**
    - `hanzi` — the single character.
@@ -92,7 +91,7 @@ Heisig cards save one card per **individual hanzi** (not per word), each with a 
    - `definition` — meaning/usage only, no pinyin.
    - `example`, `example_pinyin`, `example_translation` — a sentence or short word that uses the character in its common role, written under the same rules as above (hanzi only / pinyin / English). Prefer a common word or phrase from the session that shows the character in context. These are only used when a card is *created*; they are ignored when the call enriches an existing card.
 
-3. **Push via `add_hanzi`** with all cards in a single call and `session_name` set to the session's name (new cards join this session; existing cards keep their session).
+3. **Push via `save_character_cards`** with all cards in a single call and `section_name` set to the section's name (new cards join this section; existing cards keep their section).
 
 ### Example card
 
@@ -112,7 +111,7 @@ Heisig cards save one card per **individual hanzi** (not per word), each with a 
 ### Heisig-specific quality rules
 
 - One card per **character**, never per multi-character word.
-- Re-running `add_hanzi` on an existing character enriches it in place (keeps its review schedule) rather than duplicating — this is expected, not an error.
+- Re-running `save_character_cards` on an existing character enriches it in place (keeps its review schedule) rather than duplicating — this is expected, not an error.
 
 ---
 
@@ -132,9 +131,9 @@ Heisig cards save one card per **individual hanzi** (not per word), each with a 
 
 4b. **If Heisig cards** — follow the Heisig Card Format section, then go to step 5.
 
-5. **Choose a session name** — derive a concise, descriptive `session_name` from the main topic(s) of the session. Rules: all lowercase, no hyphens, no difficulty level, 1–3 words max.
+5. **Choose a section name** — derive a concise, descriptive `section_name` from the main topic(s) of the session. Rules: all lowercase, no hyphens, no difficulty level, 1–3 words max.
 
-6. **Push via MCP** — for regular cards call `Vocabulary App:bulk_add_vocabulary` with all words in a single call; for Heisig cards call `Vocabulary App:add_hanzi` with all cards in a single call. Set the top-level `session_name` parameter to the chosen name.
+6. **Push via MCP** — for regular cards call `Vocabulary App:add_words` with all words in a single call; for Heisig cards call `Vocabulary App:save_character_cards` with all cards in a single call. Set the top-level `section_name` parameter to the chosen name.
 
 7. **Confirm** — after the MCP call succeeds, display a short summary table in chat, including the example so the student can check it.
 
@@ -150,7 +149,7 @@ Heisig cards save one card per **individual hanzi** (not per word), each with a 
    |---|---|---|---|
    | 位 | position | wèi | 4 |
 
-   Then tell the student: "✅ X words added to your Vocabulary App under **[session_name]**. 加油！" (for Heisig cards, note how many were new vs. enriched). If a word has a second important use that did not fit on the card, mention it here in one line.
+   Then tell the student: "✅ X words added to your Vocabulary App under **[section_name]**. 加油！" (for Heisig cards, note how many were new vs. enriched). If a word has a second important use that did not fit on the card, mention it here in one line.
 
 ---
 

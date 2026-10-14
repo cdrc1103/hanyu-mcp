@@ -151,6 +151,6 @@ Then use Claude on your phone to add a word via the MCP tool, and verify it show
 | ~~MCP server HTTP transport + Bearer auth~~ | Replaced with OAuth 2.1 ✓ |
 | `pwa/app.js` hardcodes `API_URL` | Railway URL is not a secret; fine to commit |
 | SQLite on Railway | Fine for personal scale; migrate to Postgres only if you want managed backups |
-| MCP exposes only `add_vocabulary` | Could add `list_vocabulary` / `get_due_words` so Claude can answer "what's due today?" |
+| MCP has no due-words tool | `list_words` and `list_sections` exist; a `get_due_words` tool would let an assistant answer "what's due today?" |
 | No CI pipeline | Add GitHub Actions to run `pytest` on push |
 | PWA offline writes | Currently dropped; could queue to IndexedDB and sync on reconnect |

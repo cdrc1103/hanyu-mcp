@@ -30,7 +30,6 @@ class VocabWord(TypedDict, total=False):
         example_pinyin: Pinyin of the example sentence, with tone marks.
         example_translation: English translation of the example sentence.
         language: Optional language code.
-        session_name: Optional session name to assign the word to.
     """
 
     word: Required[str]
@@ -40,7 +39,6 @@ class VocabWord(TypedDict, total=False):
     example_pinyin: str
     example_translation: str
     language: str
-    session_name: str
 
 
 VOCAB_API_URL = os.getenv("VOCAB_API_URL", "http://localhost:8000")
@@ -87,41 +85,38 @@ mcp = FastMCP(
 # ── MCP tools ─────────────────────────────────────────────────────────────────
 
 
-@mcp.tool(
-    description=(
-        "Add multiple vocabulary words at once to the personal study app (max 50). "
-        "Use this when the user has asked to save several words from a conversation, "
-        "or when you've explained multiple words and want to offer to save them all. "
-        "Pass session_name to group all words under a named study session (e.g. 'Japanese N5 Verbs'). "
-        "Always pass pinyin in the separate pinyin field. "
-        "The definition field is for meaning/usage only — do NOT put pinyin in it. "
-        "Put the example sentence in hanzi only in example, its pinyin in example_pinyin and "
-        "its English translation in example_translation — never combine them in one field."
-    )
+_ADD_WORDS_DESCRIPTION = (
+    "Save one or more vocabulary words to the personal study app (max 50 per call). "
+    "Use this when the user asks to save words from a conversation, or when you have explained "
+    "words and want to offer to save them. Pass section_name to group the words under a named "
+    "section (e.g. 'HSK 3 travel'); it is created if new. Words that already exist are skipped. "
+    "Always pass pinyin in the separate pinyin field. "
+    "The definition field is for meaning/usage only — do NOT put pinyin in it. "
+    "Put the example sentence in hanzi only in example, its pinyin in example_pinyin and "
+    "its English translation in example_translation — never combine them in one field."
 )
-async def bulk_add_vocabulary(
-    words: list[VocabWord],
-    session_name: str | None = None,
-) -> str:
-    """Add multiple vocabulary words at once via MCP tool.
 
-    Creates vocabulary entries in bulk, accessible to Claude and other MCP clients.
+
+@mcp.tool(name="add_words", description=_ADD_WORDS_DESCRIPTION)
+async def add_words(
+    words: list[VocabWord],
+    section_name: str | None = None,
+) -> str:
+    """Save vocabulary words (one or many) via MCP tool.
+
+    Creates vocabulary entries in bulk, accessible to AI assistants and other MCP clients.
     Supports up to 50 words per request. Skips duplicate words automatically.
-    When session_name is provided it overrides any per-word session_name.
 
     Args:
         words: List of VocabWord entries with word, pinyin, definition, and optional fields.
-        session_name: Session name applied to all words in the batch. Auto-created if new.
+        section_name: Section applied to all words in the batch. Auto-created if new.
 
     Returns:
         Success message with count of saved and skipped words, or error message.
     """
     try:
-        words_to_send = (
-            [{**w, "session_name": session_name} for w in words]
-            if session_name is not None
-            else list(words)
-        )
+        # The backend still calls sections "sessions".
+        words_to_send = [{**w, "session_name": section_name} for w in words]
         response = await _http_client.post(
             f"{VOCAB_API_URL}/vocabulary/bulk",
             json={"words": words_to_send},
@@ -142,117 +137,132 @@ async def bulk_add_vocabulary(
         return f"Failed to save words: {e}"
 
 
+async def _fetch_sections() -> list[dict]:
+    """Fetch all vocabulary sections from the backend (it calls them sessions)."""
+    response = await _http_client.get(
+        f"{VOCAB_API_URL}/sessions",
+        headers={"X-API-Key": VOCAB_API_KEY},
+        timeout=10.0,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 @mcp.tool(
     description=(
-        "Add a single vocabulary word to the personal study app. "
-        "Use this when the user wants to save one word with its definition. "
-        "Pass session_name to assign it to a named study session. "
-        "Always pass pinyin in the separate pinyin field. "
-        "The definition field is for meaning/usage only — do NOT put pinyin in it. "
-        "Put the example sentence in hanzi only in example, its pinyin in example_pinyin and "
-        "its English translation in example_translation — never combine them in one field."
+        "List the user's vocabulary sections (named groups of words) with their dates. "
+        "Use this to check which sections exist before saving, listing or deleting words."
     )
 )
-async def add_vocabulary(
-    word: str,
-    pinyin: str,
-    definition: str,
-    example: str | None = None,
-    example_pinyin: str | None = None,
-    example_translation: str | None = None,
-    language: str | None = None,
-    session_name: str | None = None,
-) -> str:
-    """Add a single vocabulary word via MCP tool.
-
-    Creates a vocabulary entry accessible to Claude and other MCP clients.
-
-    Args:
-        word: The vocabulary word.
-        pinyin: Pinyin romanization with tone marks.
-        definition: Definition of the word (meaning only, no pinyin).
-        example: Optional example sentence in hanzi only.
-        example_pinyin: Optional pinyin of the example sentence, with tone marks.
-        example_translation: Optional English translation of the example sentence.
-        language: Optional language code.
-        session_name: Session name to assign the word to. Auto-created if new.
+async def list_sections() -> str:
+    """List all vocabulary sections via MCP tool.
 
     Returns:
-        Success message with word details, or error message.
+        One line per section, or a message when there are none, or an error message.
     """
     try:
-        payload = {
-            "word": word,
-            "pinyin": pinyin,
-            "definition": definition,
-            "example": example,
-            "example_pinyin": example_pinyin,
-            "example_translation": example_translation,
-            "language": language or "unknown",
-            "session_name": session_name,
-        }
-        response = await _http_client.post(
-            f"{VOCAB_API_URL}/vocabulary",
-            json=payload,
-            headers={"X-API-Key": VOCAB_API_KEY},
-            timeout=30.0,
-        )
-        response.raise_for_status()
-        return f'Added "{word}" ("{definition}") to vocabulary.'
+        sections = await _fetch_sections()
+        if not sections:
+            return "No sections yet."
+        return "\n".join(f"- {s['name']} ({s['date']})" for s in sections)
     except httpx.HTTPStatusError as e:
-        return f"Failed to save word: HTTP {e.response.status_code} — {e.response.text}"
+        return f"Failed to list sections: HTTP {e.response.status_code} — {e.response.text}"
     except Exception as e:
-        return f"Failed to save word: {e}"
+        return f"Failed to list sections: {e}"
 
 
 @mcp.tool(
     description=(
-        "Delete an entire vocabulary session and all its words. "
-        "Use this when the user wants to remove all words from a named session "
-        "and clear the session itself. The session is identified by its exact name."
+        "List saved vocabulary words, optionally only those in one section. "
+        "Use this to check whether a word is already saved, or to answer questions about "
+        "what the user has saved. Returns at most `limit` words (default 50, max 200)."
     )
 )
-async def delete_session(session_name: str) -> str:
-    """Delete a vocabulary session and all its words via MCP tool.
-
-    First fetches all sessions to resolve session_name to a session_id,
-    then calls DELETE /vocabulary/session/{session_id} to remove all words
-    and the session record in one backend operation.
+async def list_words(
+    section_name: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> str:
+    """List saved vocabulary words via MCP tool.
 
     Args:
-        session_name: Exact name of the session to delete.
+        section_name: Optional exact section name to filter by.
+        limit: Number of words to return (1-200, default 50).
+        offset: Number of words to skip, for paging.
+
+    Returns:
+        A total count and one line per word, or a not-found/error message.
+    """
+    try:
+        params: dict[str, int] = {"limit": max(1, min(limit, 200)), "offset": max(0, offset)}
+        if section_name is not None:
+            section = next((s for s in await _fetch_sections() if s["name"] == section_name), None)
+            if section is None:
+                return f"Section '{section_name}' not found."
+            params["session_id"] = section["id"]
+        response = await _http_client.get(
+            f"{VOCAB_API_URL}/vocabulary",
+            params=params,
+            headers={"X-API-Key": VOCAB_API_KEY},
+            timeout=10.0,
+        )
+        response.raise_for_status()
+        data = response.json()
+        lines = [
+            f"- {w['word']} ({w.get('pinyin') or '?'}): {w['definition']} "
+            f"[{w.get('session_name', '')}]"
+            for w in data["words"]
+        ]
+        header = (
+            f"{data['total']} words total; showing {len(lines)} from offset {params['offset']}."
+        )
+        return "\n".join([header, *lines])
+    except httpx.HTTPStatusError as e:
+        return f"Failed to list words: HTTP {e.response.status_code} — {e.response.text}"
+    except Exception as e:
+        return f"Failed to list words: {e}"
+
+
+@mcp.tool(
+    description=(
+        "PERMANENTLY delete a vocabulary section AND all words in it, including their review "
+        "progress. Only use this when the user explicitly asks to remove a whole section. "
+        "The section is identified by its exact name (see list_sections)."
+    )
+)
+async def delete_section(section_name: str) -> str:
+    """Delete a vocabulary section and all its words via MCP tool.
+
+    Resolves section_name to an id via GET /sessions, then calls
+    DELETE /vocabulary/session/{id} to remove the words and the section record.
+
+    Args:
+        section_name: Exact name of the section to delete.
 
     Returns:
         Success message with deleted word count, or an error/not-found message.
     """
     try:
-        sessions_response = await _http_client.get(
-            f"{VOCAB_API_URL}/sessions",
-            headers={"X-API-Key": VOCAB_API_KEY},
-            timeout=10.0,
-        )
-        sessions_response.raise_for_status()
-        sessions = sessions_response.json()
-        session = next((s for s in sessions if s["name"] == session_name), None)
-        if session is None:
-            return f"Session '{session_name}' not found."
+        section = next((s for s in await _fetch_sections() if s["name"] == section_name), None)
+        if section is None:
+            return f"Section '{section_name}' not found."
         delete_response = await _http_client.delete(
-            f"{VOCAB_API_URL}/vocabulary/session/{session['id']}",
+            f"{VOCAB_API_URL}/vocabulary/session/{section['id']}",
             headers={"X-API-Key": VOCAB_API_KEY},
             timeout=10.0,
         )
         delete_response.raise_for_status()
         deleted_words = delete_response.json()["deleted_words"]
-        return f"Deleted session '{session_name}' and {deleted_words} words."
+        return f"Deleted section '{section_name}' and {deleted_words} words."
     except httpx.HTTPStatusError as e:
-        return f"Failed to delete session: HTTP {e.response.status_code} — {e.response.text}"
+        return f"Failed to delete section: HTTP {e.response.status_code} — {e.response.text}"
     except Exception as e:
-        return f"Failed to delete session: {e}"
+        return f"Failed to delete section: {e}"
 
 
-# ── Heisig tools (registered from server.heisig) ─────────────────────────────
+# ── Heisig tools (registered from server_heisig) ─────────────────────────────
 
-add_hanzi = register_tools(mcp, _http_client, VOCAB_API_URL, VOCAB_API_KEY)
+save_character_cards = register_tools(mcp, _http_client, VOCAB_API_URL, VOCAB_API_KEY)
 
 # ── Custom routes (unprotected) ───────────────────────────────────────────────
 
