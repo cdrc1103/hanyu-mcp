@@ -143,7 +143,7 @@ export function createQuiz(root, hooks) {
     hooks.onFinish({ asked, correct: correctCount });
   }
 
-  // cards: the cards to loop over; fullDeck: where wrong options come from.
+  // cards: the cards to loop over; fullDeck: where wrong options come from (the chosen section).
   function start({ cards: cardList, fullDeck }) {
     stop();
     active = true;

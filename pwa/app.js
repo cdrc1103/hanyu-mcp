@@ -383,7 +383,7 @@ const quiz = createQuiz(studyEl.quiz, {
   },
 });
 
-// Full deck (not just due cards) so quiz answers have plausible wrong options.
+// Full deck (not just due cards); loadQuiz narrows it to the chosen section.
 async function fetchDeck() {
   const res = await apiFetch("/vocabulary?limit=1000");
   if (!res.ok) throw new Error("Failed to load deck");
@@ -459,22 +459,24 @@ async function loadQuiz() {
   }
   studyEl.loading.classList.add("hidden");
 
-  const cards = deck.filter(
-    (c) =>
-      (currentSessionId === null || c.session_id === currentSessionId) &&
-      (!createdAfter || c.created_at >= createdAfter)
-  );
-  if (deck.length < 4 || cards.length === 0) {
+  // Wrong options come from the chosen section only (every word in it, regardless of
+  // review period), so a section quiz never offers words from other sections.
+  const optionPool =
+    currentSessionId === null ? deck : deck.filter((c) => c.session_id === currentSessionId);
+  const cards = optionPool.filter((c) => !createdAfter || c.created_at >= createdAfter);
+  if (optionPool.length < 4 || cards.length === 0) {
     studyEl.notice.textContent =
-      deck.length < 4
-        ? "The quiz needs at least 4 words in your deck. Try flashcards for now."
+      optionPool.length < 4
+        ? currentSessionId === null
+          ? "The quiz needs at least 4 words in your deck. Try flashcards for now."
+          : "The quiz needs at least 4 words in this section. Try flashcards for now."
         : "No words in this section and review period.";
     studyEl.notice.classList.remove("hidden");
     return;
   }
   reviewedCount = 0;
   studyEl.quiz.classList.remove("hidden");
-  quiz.start({ cards, fullDeck: deck });
+  quiz.start({ cards, fullDeck: optionPool });
 }
 
 function showCard() {

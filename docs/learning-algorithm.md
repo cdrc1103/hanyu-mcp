@@ -114,7 +114,7 @@ Both modes use the same SM-2 algorithm and quality scores, but each keeps its ow
 - **Cards:** every word in the selected section and review period (not just due words).
 - **Questions:** hanzi → meaning, hanzi → pinyin, meaning → hanzi and sound → hanzi, picked at random per question (the Normal / Reverse toggle applies to flashcards only).
 - **Looping:** the cards are asked once each in a random order; then a new round starts with a fresh shuffle, until you press "End quiz" or leave. A summary shows how many you answered and how many were right.
-- **Options:** wrong options are other cards from the whole deck, preferring cards with the same character count.
+- **Options:** wrong options are other cards from the selected section (the whole deck when "All sections" is selected), preferring cards with the same character count. They ignore the review period, and a section needs at least 4 words to be quizzed.
 
 Audio uses the browser's Web Speech API with a Mandarin system voice (Cantonese voices are skipped) at a fixed, slightly slow speed. It never plays something that gives away the answer: while you can see the hanzi, nothing is spoken, and only the sound → hanzi question plays by itself, because hearing the word is that question. After you answer, or when a flashcard is flipped, the word and its example sentence are spoken. The one audio setting is "Auto-play audio" (device setting in Review settings); a warning appears there only if the device has no Mandarin voice.
 
