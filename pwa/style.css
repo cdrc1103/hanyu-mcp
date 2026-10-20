@@ -512,9 +512,6 @@ button { -webkit-tap-highlight-color: transparent; }
 #edit-cancel:hover { background: var(--fill-hover); }
 .edit-sheet-delete { display: block; width: 100%; margin-top: 0.75rem; font-size: 1rem; }
 
-/* English translation shown under the hanzi on the back in reverse mode */
-.card-translation { margin-top: 0.5rem; font-size: 1.125rem; }
-
 /* Pinyin sits at the top of the card back, centered, above a divider and the
    rest of the card. */
 .card-pinyin-block {
