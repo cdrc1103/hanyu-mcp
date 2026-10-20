@@ -362,7 +362,6 @@ const studyEl = {
   example: document.getElementById("card-example"),
   pinyinBlock: document.getElementById("card-pinyin-block"),
   pinyin: document.getElementById("card-pinyin"),
-  translation: document.getElementById("card-translation"),
   ratings: document.getElementById("rating-buttons"),
   hint: document.querySelector(".card-hint"),
   speak: document.getElementById("card-speak"),
@@ -515,43 +514,31 @@ function updateCardSpeaker(card) {
 
 // Fill both faces of the card for the current mode.
 // Normal:  front word, back definition + example (+ Heisig pinyin block).
-// Reverse: front pinyin only, back hanzi + English translation + example.
-// Cards with no recoverable pinyin fall back to definition on the front and
-// the word on the back.
+// Reverse: front English definition, back pinyin + hanzi + example.
+// Cards with no recoverable pinyin skip the pinyin block on the back.
 function renderCardFaces(card) {
   const heisig = card.heisig;
   const toneClass = heisig ? `tone-${heisig.tone || 5}` : "";
   const { pinyin, english } = splitPinyin(card);
-  const pinyinFront = reverseMode && !!pinyin;
 
-  if (pinyinFront) {
-    studyEl.word.textContent = pinyin;
-    studyEl.word.className = `card-word ${toneClass}`.trim();
-    studyEl.definition.textContent = card.word || "";
-    studyEl.definition.className = `card-definition ${toneClass}`.trim();
-    if (!heisig) studyEl.definition.replaceChildren(toneWord(card.word || "", pinyin));
-    studyEl.translation.textContent = english;
-  } else if (reverseMode) {
-    studyEl.word.textContent = card.definition || "";
+  if (reverseMode) {
+    studyEl.word.textContent = (pinyin ? english : card.definition) || "";
     studyEl.word.className = "card-word";
     studyEl.definition.textContent = card.word || "";
     studyEl.definition.className = `card-definition ${toneClass}`.trim();
-    studyEl.translation.textContent = "";
+    if (pinyin && !heisig) studyEl.definition.replaceChildren(toneWord(card.word || "", pinyin));
   } else {
     studyEl.word.textContent = card.word || "";
     studyEl.word.className = `card-word ${toneClass}`.trim();
     // Legacy cards embed "pinyin | english"; show just the English and let the
     // pinyin block (below) carry the pinyin.
-    studyEl.definition.textContent = reverseMode || !pinyin ? card.definition || "" : english;
+    studyEl.definition.textContent = pinyin ? english : card.definition || "";
     studyEl.definition.className = "card-definition";
-    studyEl.translation.textContent = "";
   }
-  studyEl.translation.classList.toggle("hidden", !pinyinFront);
   studyEl.example.replaceChildren(...[exampleBlock(card)].filter(Boolean));
 
-  // Pinyin sits on the front in reverse mode, so only show it on the back in
-  // normal mode.
-  renderPinyinBlock(pinyin, heisig ? heisig.tone || 5 : null, !reverseMode && !!pinyin, card);
+  // The pinyin block sits at the top of the back in both modes.
+  renderPinyinBlock(pinyin, heisig ? heisig.tone || 5 : null, !!pinyin, card);
 }
 
 // Populate or hide the pinyin block on the card back. Tone colouring needs a

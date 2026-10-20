@@ -42,7 +42,7 @@ Learning Chinese with an AI tutor works great — until the session ends and the
 | **5** MCP tools | `add_words`, `save_character_cards`, `list_sections`, `list_words`, `delete_section` |
 | **50** words per call | Save an entire lesson in a single request |
 | **1 → 6 → 15 → 38 days** | Review intervals after consecutive Good, Good, Good, Easy ratings (SM-2) |
-| **2** independent schedules | Forward (hanzi → meaning) and reverse (pinyin → hanzi) progress are tracked separately |
+| **2** independent schedules | Forward (hanzi → meaning) and reverse (English → pinyin + hanzi) progress are tracked separately |
 | **4** quiz question types | Hanzi → meaning, hanzi → pinyin, meaning → hanzi, sound → hanzi |
 | **0** build steps, **0** frontend dependencies | The PWA is plain HTML, CSS and JavaScript |
 
@@ -51,7 +51,7 @@ Learning Chinese with an AI tutor works great — until the session ends and the
 **For learners**
 
 - 🧠 **Spaced repetition (SM-2)** — cards resurface at growing intervals; one lapse resets the streak but keeps your ease factor.
-- 🔄 **Normal and reverse study modes** — recognise the hanzi, or recall it from pinyin. Each direction keeps its own schedule.
+- 🔄 **Normal and reverse study modes** — recognise the hanzi, or recall it from its English meaning. Each direction keeps its own schedule.
 - 🎯 **Endless mixed quiz** — multiple-choice practice that never touches your flashcard progress.
 - 🔊 **Mandarin text-to-speech** — words and example sentences are spoken after you answer, never before (no spoilers).
 - 🌈 **Tone-coloured pinyin** — see the tones at a glance.
