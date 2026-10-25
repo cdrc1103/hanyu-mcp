@@ -4,7 +4,7 @@
 
 # Hanyu MCP
 
-### Learn Chinese vocabulary with your AI tutor — and never forget it.
+### Learn Chinese vocabulary with your AI tutor.
 
 **Save words from any AI chat straight into a spaced-repetition flashcard app on your phone.**
 Self-hosted · open source · Mandarin (hanzi, pinyin, tones) · SM-2 scheduling · MCP-native
@@ -31,9 +31,9 @@ Self-hosted · open source · Mandarin (hanzi, pinyin, tones) · SM-2 scheduling
 
 ## Why Hanyu MCP?
 
-Learning Chinese with an AI tutor works great — until the session ends and the new words vanish into chat history. Copying them into a flashcard app by hand is tedious, so most people never do it.
+Learning Chinese with an AI tutor works great until the session ends and the new words vanish into chat history. Copying them into a flashcard app by hand is tedious, so most people never do it.
 
-**Hanyu MCP closes that gap.** Say *"wrap up and save today's vocab"* and your assistant pushes every new word — with pinyin, meaning and a context-rich example sentence — into your own review deck. Later, you study it on your phone, and the SM-2 spaced-repetition algorithm schedules each card for the moment you are about to forget it.
+**Hanyu MCP closes that gap.** Say *"wrap up and save today's vocab"* and your assistant pushes every new word, with pinyin, meaning and a context-rich example sentence, into your own review deck. Later, you study it on your phone, and the SM-2 spaced-repetition algorithm schedules each card for the moment you are about to forget it.
 
 ## The numbers
 
